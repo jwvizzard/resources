@@ -1,0 +1,168 @@
+---
+title: R Project Template
+author: James W. Vizzard
+description: A basic R project checklist to get started so I don't have to go back and unscrew things like Git integration
+original date: 20260330
+tags: data, r, template
+---
+
+# Use the "Github first" option to start the project.
+# Use GitKraken to create a new repository. Give it the name to use on both Github and the local machine.
+# Copy the repository URL from Github
+# In RStudio, create a new project using Version Control > Git
+# Enter the repository URL in the popup
+# Set the local directory to /Data/*projectname* [project name = Github repository name]
+# The Git tab in RStudio should show the repository as an option
+
+```{r echo=FALSE, message=FALSE, error=FALSE}
+# Use pacman to load and install dependencies.
+library(pacman)
+
+# List your projects's dependencies here, comma separated:
+p_load(tidyverse, dplyr, here, readr, haven, knitr, ggplot2, RColorBrewer)
+
+# set base folder for data
+# here::i_am("Documents/Qatar_Cars")
+```
+
+# load data and label variable columns
+```{r echo=FALSE, message=FALSE, error=FALSE}
+# load and label the data
+# load qatarcars.csv
+qcars <- read_csv ("qatarcars.csv")
+
+# label the columns
+attr(qcars$origin, "label") <- "Country of Origin"
+attr(qcars$make, "label") <- "Manufacturer"
+attr(qcars$model, "label") <- "Model"
+attr(qcars$length, "label") <- "Length (m)"
+attr(qcars$width, "label") <- "Width (m)"
+attr(qcars$height, "label") <- "Height (M)"
+attr(qcars$seating, "label") <- "Number of seats"
+attr(qcars$trunk, "label") <- "Trunk capacity (L)"
+attr(qcars$economy, "label") <- "Fuel Economy (L/100km)"
+attr(qcars$horsepower, "label") <- "Horsepower"
+attr(qcars$price, "label") <- "2025 price ($US)"
+attr(qcars$mass, "label") <- "Weight (KG)"
+attr(qcars$performance, "label") <- "0-100 KPH"
+attr(qcars$type, "label") <- "Body Type"
+attr(qcars$enginetype, "label") <- "Fuel"
+```
+
+## R provides a wide range of functions for obtaining summary statistics. One 
+## method of obtaining descriptive statistics is to use the sapply( ) function 
+## with a specified summary statistic. 
+
+# get means for variables in data frame mydata excluding missing values
+```{r echo=FALSE}
+sapply(mydata, mean, na.rm=TRUE) 
+
+```
+
+# Possible functions used in sapply include mean, sd, var, min, max, median, 
+#range, and quantile.
+
+# There are also numerous R functions designed to provide a range of descriptive
+# statistics at once. For example
+
+```{r}
+
+# mean,median,25th and 75th quartiles,min,max
+summary(mydata)
+
+```
+
+# Tukey min,lower-hinge, median,upper-hinge,max
+```{r}
+fivenum(x)
+```
+
+# Using the Hmisc package
+```{r}
+library(Hmisc)
+describe(mydata)
+# n, nmiss, unique, mean, 5,10,25,50,75,90,95th percentiles
+# 5 lowest and 5 highest scores
+```
+
+# Using the pastecs package
+```{r}
+library(pastecs)
+stat.desc(mydata)
+# nbr.val, nbr.null, nbr.na, min max, range, sum,
+# median, mean, SE.mean, CI.mean, var, std.dev, coef.var
+```
+
+# Using the psych package
+```{r}
+library(psych)
+describe(mydata)
+# item name ,item number, nvalid, mean, sd,
+# median, mad, min, max, skew, kurtosis, se
+```
+
+## Summary Statistics by Group
+# A simple way of generating summary statistics by grouping variable is 
+# available in the psych package.
+```{r}
+library(psych)
+describe.by(mydata, group,...)
+```
+
+# The doBy package provides much of the functionality of SAS PROC SUMMARY. It 
+# defines the desired table using a model formula and a function. Here is a 
+# simple example.
+```{r}
+library(doBy)
+summaryBy(mpg + wt ~ cyl + vs, data = mtcars,
+          FUN = function(x) { c(m = mean(x), s = sd(x)) } )
+# produces mpg.m wt.m mpg.s wt.s for each
+# combination of the levels of cyl and vs 
+```
+
+## Structure the data set
+# Create a subset of only gas-powered cars (using Musgrave's Qatar_Cars)
+```{r echo=FALSE, message=FALSE, error=FALSE}
+petrolcars <- subset( x = qcars,                    # data frame is qatarcars
+              subset = enginetype != "Electric"     # subset of petrol and hybrid cars
+              )
+```
+
+# Create a subset that removes the columns for height, width, and length
+```{r echo=FALSE, message=FALSE, error=FALSE}
+
+pcarsmass <- petrolcars %>%
+  select(origin, make, model, economy, price, mass)
+```
+
+# Select model
+```{r}
+#reference: https://www.math.ucla.edu/~anderson/rw1001/library/base/html/step.html
+
+petrolcarsmod <- lm(pcarsmass$price ~ pcarsmass$economy + pcarsmass$make + pcarsmass$origin + pcarsmass$mass)
+  
+#step assess the model to determine the best model--danger of overfitting
+
+bestmodel <- step(petrolcarsmod)
+bestmodel
+```
+
+## Create plots
+# Create scatter plot of horsepower and economy with selected color pallette
+```{r fig.width=6, fig.height=4}
+# Scatterplot
+p <- ggplot(data=petrol, mapping=aes(x = horsepower, y = economy, color = make))
+p + geom_point(size = 2) + scale_color_brewer(palette = "Set1") + theme(legend.position = "top")
+ggsave(filename = "scatterplot_horsepower_economy.png").  # save plot as .png
+
+# Boxplot
+b <- ggplot(data = petrolcars,
+            mapping = aes(x = origin, y = economy, color = origin))
+b + geom_boxplot() +
+labs(x = "Economy", y = "Country",
+     title = "Economy of Petrol & Hybrid Cars by Country",
+     subtitle = "L/100KM",
+     caption = "Source: Paul Musgrave")
+ggsave(filename = "boxplot_national_economy.png").       # save plot as .png
+```
+
