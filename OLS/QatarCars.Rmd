@@ -1,0 +1,92 @@
+---
+title: Qatar Cars
+author: James Vizzard
+original date: 20260320
+description: A basic R project using Paul Musgrave's Qatar Cars dataset to practice R functions.
+output: basic regression analyses and visualizations for practicing in R
+
+This project uses the Qatar Cars dataset created by Paul Musgrave (https://github.com/profmusgrave/qatarcars/blob/main/README.md)library(ggplot2)
+Visualizations are based on Kieran Healy's _Data Visualization: A Practical Introduction_
+---
+```{r echo=FALSE, message=FALSE, error=FALSE}
+# Use pacman to load and install dependencies.
+library(pacman)
+
+# List your projects's dependencies here, comma separated:
+p_load(tidyverse, dplyr, here, readr, haven, knitr, ggplot2, RColorBrewer)
+
+# set base folder for data
+# here::i_am("Documents/Qatar_Cars")
+```
+
+```{r echo=FALSE, message=FALSE, error=FALSE}
+# load and label the data
+# load qatarcars.csv
+qcars <- read_csv ("qatarcars.csv")
+
+# label the columns
+attr(qcars$origin, "label") <- "Country of Origin"
+attr(qcars$make, "label") <- "Manufacturer"
+attr(qcars$model, "label") <- "Model"
+attr(qcars$length, "label") <- "Length (m)"
+attr(qcars$width, "label") <- "Width (m)"
+attr(qcars$height, "label") <- "Height (M)"
+attr(qcars$seating, "label") <- "Number of seats"
+attr(qcars$trunk, "label") <- "Trunk capacity (L)"
+attr(qcars$economy, "label") <- "Fuel Economy (L/100km)"
+attr(qcars$horsepower, "label") <- "Horsepower"
+attr(qcars$price, "label") <- "2025 price ($US)"
+attr(qcars$mass, "label") <- "Weight (KG)"
+attr(qcars$performance, "label") <- "0-100 KPH"
+attr(qcars$type, "label") <- "Body Type"
+attr(qcars$enginetype, "label") <- "Fuel"
+```
+# Create a subset of only gas-powered cars
+```{r echo=FALSE, message=FALSE, error=FALSE}
+petrolcars <- subset( x = qcars,                    # data frame is qatarcars
+              subset = enginetype != "Electric" # subset of petrol and hybrid cars
+              )
+```
+
+# Create a subset that removes the columns for height, width, and length
+```{r echo=FALSE, message=FALSE, error=FALSE}
+
+pcarsmass <- petrolcars %>%
+  select(origin, make, model, economy, price, mass)
+
+```
+
+
+# Select model
+```{r}
+#reference: https://www.math.ucla.edu/~anderson/rw1001/library/base/html/step.html
+
+petrolcarsmod <- lm(pcarsmass$price ~ pcarsmass$economy + pcarsmass$make + pcarsmass$origin + pcarsmass$mass)
+  
+#step assess the model to determine the best model--danger of overfitting
+
+bestmodel <- step(petrolcarsmod)
+bestmodel
+
+
+```
+
+# Create plots
+```{r fig.width=6, fig.height=4}
+
+# Create scatter plot of horsepower and economy with selected color pallette
+p <- ggplot(data=petrol, mapping=aes(x = horsepower, y = economy, color = make))
+p + geom_point(size = 2) + scale_color_brewer(palette = "Set1") + theme(legend.position = "top")
+ggsave(filename = "scatterplot_horsepower_economy.png")
+
+# Create a boxplot
+b <- ggplot(data = petrolcars,
+            mapping = aes(x = origin, y = economy, color = origin))
+b + geom_boxplot() +
+labs(x = "Economy", y = "Country",
+     title = "Economy of Petrol & Hybrid Cars by Country",
+     subtitle = "L/100KM",
+     caption = "Source: Paul Musgrave")
+ggsave(filename = "boxplot_national_economy.png")
+
+```
